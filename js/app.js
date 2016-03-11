@@ -5,11 +5,71 @@ var taskInput = document.getElementById('new-task'); //new-task
 var addButton = document.getElementById('add-button'); //first button
 var incompleteTasksHolder = document.getElementById('incomplete-tasks'); //incomplete-tasks
 var completedTasksHolder = document.getElementById('completed-tasks'); //completed-tasks
+var todoItemSet = []; //Create an array to contain todo objects
+var storageKey = 'todoItem'; //String used to identify the key in the localStorage
+
+// Generate a unique UUID
+// Thanks to: http://stackoverflow.com/questions/105034/create-guid-uuid-in-javascript
+var generateUnique = function(){
+    var d = new Date().getTime();
+    if(window.performance && typeof window.performance.now === "function"){
+        d += performance.now(); //use high-precision timer if available
+    }
+    var uuid = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+        var r = (d + Math.random()*16)%16 | 0;
+        d = Math.floor(d/16);
+        return (c=='x' ? r : (r&0x3|0x8)).toString(16);
+    });
+    return uuid;
+}
+
+//Set up the storage with Basil.js
+store = new window.Basil({
+    namespace: 'todo-app'
+});
+
+var getStore = function() {
+    //Get the stored array
+    var storeSet = store.get(storageKey);
+    
+    //Check to see if storage object is created
+    if ( storeSet === null ) {
+        //Store the array into a localStorage set
+        store.set(storageKey, todoItemSet);
+    }
+
+    return todoItemSet = storeSet;
+}
+
+// Repopulates the localStorage with the todoItemSet array
+var updateStore = function() {       
+    // Now send the array to the storage
+    store.set(storageKey, todoItemSet);
+}
+
+var storeTaskItem = function() {
+    var todoItem = {
+        unique: generateUnique(), // Generate unique id for reference
+        // Get the name of the task from the input
+        name: taskInput.value,
+        // Use status to determine if task is complete or incomplete
+        // default: false (incomplete)
+        status: false,
+    };
+    
+    // Add the item to the windowed array
+    todoItemSet.push(todoItem);
+    
+    updateStore();
+}
 
 //New Task List Item
-var createNewTaskElement = function(taskString) {
+var createNewTaskElement = function(taskString, unique) {
   //Create List Item
   var listItem = document.createElement('li');
+  
+  // Create a data attribute with the uniqueID for easier identifying
+  listItem.setAttribute('data-unique', unique);
   
   //input (checkbox)
   var checkBox = document.createElement('input'); // checkbox
@@ -32,6 +92,7 @@ var createNewTaskElement = function(taskString) {
   
   label.innerText = taskString;
   
+  
   //Each elements, needs modifying
   
   //Each element needs appending
@@ -43,19 +104,38 @@ var createNewTaskElement = function(taskString) {
   
   return listItem;
 }
+
+// Show current todos in storage
+var showTasks = function() {
     
-//Add a new task
+    // Cycle through all the items in the storage
+    for (var i = 0; i < todoItemSet.length; i++ ) {
+        var storedItemName = todoItemSet[i].name; // Name of the item in storage
+        var storedItemId = i; // Used to match IDs when modifying tasks
+        var unique = todoItemSet[i].unique;
+        var listItem = createNewTaskElement(storedItemName, unique); // Create the markup using the name in each of the storage objects
+        
+        incompleteTasksHolder.appendChild(listItem);
+        bindTaskEvents(listItem, taskCompleted, storedItemId);
+    }
+}
+    
+// Add a new task
 var addTask = function() {
-  //Create a new list item with the text from #new-task
+  // Create a new list item with the text from #new-task
   var listItemValue = taskInput.value;
   var listItem = createNewTaskElement(listItemValue);
   
-  //Append listItem to incompleteTasksHolder
+  // Append listItem to incompleteTasksHolder
   if ( listItemValue.length > 1 ) {
     console.log('Add task...');
     incompleteTasksHolder.appendChild(listItem);
     bindTaskEvents(listItem, taskCompleted);
   }
+  
+  // Add the new item to the storage
+  // Needs to be executed before the input text is cleared
+  window.storeTaskItem();
   
   // Clear out the input when task is added
   taskInput.value = '';
@@ -66,6 +146,7 @@ var editTask = function() {
   console.log('Edit task...');
   
   var listItem = this.parentNode;
+  var unique = listItem.getAttribute('data-unique');
   
   var editInput = listItem.querySelector('input[type=text]');
   var label = listItem.querySelector('label');
@@ -73,7 +154,7 @@ var editTask = function() {
   
   var containsClass = listItem.classList.contains('editMode');
   
-  //if the class of the parent is .editMode
+  // If the class of the parent is .editMode
   if ( containsClass ) {
     //Switch from .editMode
     //label text become the input's value
@@ -84,6 +165,15 @@ var editTask = function() {
     
     //Toggle .save on the edit button off
     editButton.classList.toggle('save');
+    
+    for (var i = 0; i < todoItemSet.length; i++ ) {
+      if (todoItemSet[i].unique === unique ) {
+          todoItemSet[i].name = editInput.value; // Update object
+          updateStore(); // Refresh the storage
+          break;
+      }
+    }
+  
   } else {
     //Switch to .editMode
     //input value becomes the label's text
@@ -105,6 +195,15 @@ var deleteTask = function() {
   console.log('Delete task...');
   var listItem = this.parentNode;
   var ul = listItem.parentNode;
+  var unique = listItem.getAttribute('data-unique');
+  
+  for (var i = 0; i < todoItemSet.length; i++ ) {
+      if (todoItemSet[i].unique === unique ) {
+          todoItemSet.splice(i, 1);
+          updateStore();
+          break;
+      }
+  }
   
   //Remove the parent list item
   ul.removeChild(listItem);
@@ -137,23 +236,14 @@ var bindTaskEvents = function(taskListItem, checkBoxEventHandler) {
   var deleteButton = taskListItem.querySelector('button.delete');
   
     //bind the editTask to edit button
-    editButton.onclick = editTask;
+    editButton.addEventListener('click', editTask);
   
     //bind deleteTask to delete button
-    deleteButton.onclick = deleteTask;
+    deleteButton.addEventListener('click', deleteTask);
   
     //bind taskCompleted to the checkbox
-    checkBox.onchange = checkBoxEventHandler;
+    checkBox.addEventListener('change', checkBoxEventHandler);
 }
-
-// Psuedo AJAX Request
-var ajaxRequest = function() {
-  console.log('AJAX request');
-}
-
-//Set the click handler to the addTask function
-addButton.addEventListener('click', addTask);
-addButton.addEventListener('click', ajaxRequest) ;
 
 //cycle of the incompleteTasksHolder ul list items
 for (var i = 0; i < incompleteTasksHolder.children.length; i++) {
@@ -167,3 +257,12 @@ for (var i = 0; i < completedTasksHolder.children.length; i++) {
   //bind events to list item's children (taskImcomplete)
   bindTaskEvents(completedTasksHolder.children[i], taskIncomplete);
 }
+
+// On load we need to populate the todoItemSet with the objects in the localStorage
+window.getStore();
+
+// On load we need to populate the markup with objects in the storage key
+window.showTasks();
+
+//Set the click handler to the addTask function
+addButton.addEventListener('click', addTask);
