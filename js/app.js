@@ -194,7 +194,7 @@ var editTask = function() {
     for (var i = 0; i < todoItemSet.length; i++ ) {
       // If the stored unique is the same as the data-unique
         if (todoItemSet[i].unique === unique ) {
-            todoItemSet[this].name = editInput.value; // Update object
+            todoItemSet[i].name = editInput.value; // Update object
             updateStore(); // Refresh storage
             break;
         }
