@@ -1,5 +1,7 @@
-//Problem: User interaction doesn't provide desired results.
-//Solution: Add interactivty so the user can manage daily tasks.
+/**
+ * Dummy ToDo App
+ * Warning: This is not intended for real world use at this time.
+ */
 
 var taskInput = document.getElementById('new-task'); //new-task
 var addButton = document.getElementById('add-button'); //first button
