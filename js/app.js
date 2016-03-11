@@ -26,7 +26,7 @@ var generateUnique = function(){
 }
 
 //Set up the storage with Basil.js
-store = new window.Basil({
+var store = new window.Basil({
     namespace: 'todo-app'
 });
 
@@ -64,6 +64,22 @@ var storeTaskItem = function() {
     
     updateStore();
 }
+
+// Cycle through all the Items in the storage
+var cycleItems = function(item ,callback) {
+    var unique = item.getAttribute('data-unique');
+    
+    // Iterate over the items in the todoItemSet
+    for (var i = 0; i < todoItemSet.length; i++ ) {
+      // If the stored unique is the same as the data-unique
+        if (todoItemSet[i].unique === unique ) {
+            callback = callback || function () {}; // Hook for an action
+            updateStore(); // Refresh storage
+            break;
+        }
+    }
+}
+
 
 //New Task List Item
 var createNewTaskElement = function(taskString, unique) {
@@ -113,12 +129,18 @@ var showTasks = function() {
     // Cycle through all the items in the storage
     for (var i = 0; i < todoItemSet.length; i++ ) {
         var storedItemName = todoItemSet[i].name; // Name of the item in storage
-        var storedItemId = i; // Used to match IDs when modifying tasks
+        var indexId = i; // Used to match IDs when modifying tasks
         var unique = todoItemSet[i].unique;
         var listItem = createNewTaskElement(storedItemName, unique); // Create the markup using the name in each of the storage objects
         
-        incompleteTasksHolder.appendChild(listItem);
-        bindTaskEvents(listItem, taskCompleted, storedItemId);
+        // Check the item's status to figure out which holder to append it to
+        if ( todoItemSet[i].status ) {
+            completedTasksHolder.appendChild(listItem);
+            bindTaskEvents(listItem, taskIncomplete, indexId);
+        } else {
+            incompleteTasksHolder.appendChild(listItem);
+            bindTaskEvents(listItem, taskCompleted, indexId);
+        }
     }
 }
     
@@ -168,14 +190,16 @@ var editTask = function() {
     //Toggle .save on the edit button off
     editButton.classList.toggle('save');
     
+    // Iterate over the items in the todoItemSet
     for (var i = 0; i < todoItemSet.length; i++ ) {
-      if (todoItemSet[i].unique === unique ) {
-          todoItemSet[i].name = editInput.value; // Update object
-          updateStore(); // Refresh the storage
-          break;
-      }
+      // If the stored unique is the same as the data-unique
+        if (todoItemSet[i].unique === unique ) {
+            todoItemSet[this].name = editInput.value; // Update object
+            updateStore(); // Refresh storage
+            break;
+        }
     }
-  
+    
   } else {
     //Switch to .editMode
     //input value becomes the label's text
@@ -199,14 +223,16 @@ var deleteTask = function() {
   var ul = listItem.parentNode;
   var unique = listItem.getAttribute('data-unique');
   
-  for (var i = 0; i < todoItemSet.length; i++ ) {
-      if (todoItemSet[i].unique === unique ) {
-          todoItemSet.splice(i, 1);
-          updateStore();
-          break;
-      }
-  }
-  
+  // Iterate over the items in the todoItemSet
+    for (var i = 0; i < todoItemSet.length; i++ ) {
+      // If the stored unique is the same as the data-unique
+        if (todoItemSet[i].unique === unique ) {
+            todoItemSet.splice(i, 1);
+            updateStore(); // Refresh storage
+            break;
+        }
+    }
+
   //Remove the parent list item
   ul.removeChild(listItem);
 }
@@ -214,24 +240,55 @@ var deleteTask = function() {
 
 //Mark a Task as complete
 var taskCompleted = function() {
-  console.log('Complete task...');
-  //Append the task list item to the #completed-tasks
-  var listItem = this.parentNode;
-  completedTasksHolder.appendChild(listItem);
-  bindTaskEvents(listItem, taskIncomplete);
+    console.log('Complete task...');
+    
+    //Append the task list item to the #completed-tasks
+    var listItem = this.parentNode;
+    
+    var unique = listItem.getAttribute('data-unique');
+  
+    // Iterate over the items in the todoItemSet
+    // ToDo: use a cycle function and have arguement for only the action that needs to be performed
+    for (var i = 0; i < todoItemSet.length; i++ ) {
+        // If the stored unique is the same as the data-unique
+        if (todoItemSet[i].unique === unique ) {
+            todoItemSet[i].status = true;
+            updateStore(); // Refresh storage
+            break;
+        }
+    }
+    
+    completedTasksHolder.appendChild(listItem);
+    bindTaskEvents(listItem, taskIncomplete);
 }
 
 //Mark as a Task as incomplete
 var taskIncomplete = function() {
   console.log('Incomplete task...');
+  
   //Append the task list item to the #incomplete-tasks
   var listItem = this.parentNode;
+  
+  var unique = listItem.getAttribute('data-unique');
+  
+    // Iterate over the items in the todoItemSet
+    // ToDo: use a cycle function and have arguement for only the action that needs to be performed
+    for (var i = 0; i < todoItemSet.length; i++ ) {
+        // If the stored unique is the same as the data-unique
+        if (todoItemSet[i].unique === unique ) {
+            todoItemSet[i].status = false;
+            updateStore(); // Refresh storage
+            break;
+        }
+    }
+  
   incompleteTasksHolder.appendChild(listItem);
   bindTaskEvents(listItem, taskCompleted);
 }
 
 var bindTaskEvents = function(taskListItem, checkBoxEventHandler) {
   console.log('Bind list item events');
+  
   //select taskListItem's children
   var checkBox = taskListItem.querySelector('input[type=checkbox]');
   var editButton = taskListItem.querySelector('button.edit');
