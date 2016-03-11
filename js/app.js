@@ -163,6 +163,9 @@ var addTask = function() {
   
   // Clear out the input when task is added
   taskInput.value = '';
+  
+  // Refocus on the input when a task is added
+  window.taskInput.focus();
 }
 
 //Edit an existing task
@@ -325,3 +328,10 @@ window.showTasks();
 
 //Set the click handler to the addTask function
 addButton.addEventListener('click', addTask);
+
+// Add task if the enter key is pressed 
+taskInput.addEventListener('keydown', function(e) {
+    if (e.keyCode === 13) {
+        addTask();
+    }
+});
